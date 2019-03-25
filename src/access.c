@@ -21,7 +21,7 @@
 #define DEFAULT_DUMP_SIZE    256
 
 #define APPNAME    "ma"
-#define DPRINTF(fmt, args ...)    printf(APPNAME ": " fmt, ##args)
+#define DPRINTF(fmt, args ...)    no_printf(APPNAME ": " fmt, ##args)
 
 struct app_option {
 	const char *fname;
