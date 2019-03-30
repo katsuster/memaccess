@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdarg.h>
 #include <inttypes.h>
 #include <string.h>
 #include <sys/types.h>
@@ -21,7 +22,9 @@
 #define DEFAULT_DUMP_SIZE    256
 
 #define APPNAME    "ma"
-#define DPRINTF(fmt, args ...)    no_printf(APPNAME ": " fmt, ##args)
+#define DPRINTF(fmt, args ...)    dbg_printf(APPNAME ": " fmt, ##args)
+
+int g_debug = 0;
 
 struct app_option {
 	const char *fname;
@@ -30,9 +33,19 @@ struct app_option {
 };
 
 __attribute__ ((format (printf, 1, 2)))
-int no_printf(const char *format, ...)
+int dbg_printf(const char *format, ...)
 {
-	return 0;
+	va_list ap;
+	int res;
+
+	if (g_debug == 0)
+		return 0;
+
+	va_start(ap, format);
+	res = vprintf(format, ap);
+	va_end(ap);
+
+	return res;
 }
 
 void usage(int argc, char *argv[])
@@ -43,6 +56,7 @@ void usage(int argc, char *argv[])
 		"  %s [options] edit_command address size value_list\n"
 		"  options\n"
 		"  -k    use filename instead of /dev/mem\n"
+		"  -d    show debug message\n"
 		"  -h    show this help\n"
 		"\n"
 		"  dump_command\n"
@@ -82,10 +96,13 @@ int main(int argc, char *argv[])
 
 	//get arguments
 	o.fname = "/dev/mem";
-	while ((opt = getopt(argc, argv, "k:h")) != -1) {
+	while ((opt = getopt(argc, argv, "k:dh")) != -1) {
 		switch (opt) {
 		case 'k':
 			o.fname = optarg;
+			break;
+		case 'd':
+			g_debug = 1;
 			break;
 		case 'h':
 			usage(argc, argv);
@@ -168,9 +185,9 @@ int main(int argc, char *argv[])
 		cnt_list = argc - list_start;
 	}
 	DPRINTF("cmd:%s, addr:0x%08llx, size:%d, "
-		"size_unit:%d list_start:%d\n",
+		"size_unit:%d list_start:%d, cnt:%d\n",
 		cmd, (unsigned long long)addr, (int)size,
-		(int)o.size_unit, list_start);
+		(int)o.size_unit, list_start, cnt_list);
 
 	//alloc value_list
 	list_val = calloc(cnt_list, sizeof(uint32_t));
@@ -215,9 +232,10 @@ int main(int argc, char *argv[])
 		size_map = 0 - addr_align_st - 4;
 	}
 
-	DPRINTF("map:0x%08llx - 0x%08llx\n",
+	DPRINTF("map:0x%08llx - 0x%08llx, file:%s\n",
 		(unsigned long long)addr_align_st,
-		(unsigned long long)addr_align_ed);
+		(unsigned long long)addr_align_ed,
+		o.fname);
 	result = mm_map(&m, o.fname, size_map, addr_align_st);
 	if (result != 0) {
 		result = -EACCES;
