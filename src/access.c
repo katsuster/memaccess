@@ -38,9 +38,13 @@ int no_printf(const char *format, ...)
 void usage(int argc, char *argv[])
 {
 	printf("usage: \n"
-		"  %s dump_command address [size]\n"
-		"  %s edit_command address value\n"
-		"  %s edit_command address size value_list\n"
+		"  %s [options] dump_command address [size]\n"
+		"  %s [options] edit_command address value\n"
+		"  %s [options] edit_command address size value_list\n"
+		"  options\n"
+		"  -k    use filename instead of /dev/mem\n"
+		"  -h    show this help\n"
+		"\n"
 		"  dump_command\n"
 		"    db, dw, dd, dq: b: byte(8bits), w: word(16bits), \n"
 		"                    d, l: double(32bits), q: quad(64bits).\n"
@@ -70,21 +74,31 @@ int main(int argc, char *argv[])
 	int cnt_list;
 
 	struct mm_mapping m;
-	int list_start;
+	int opt, list_start;
 	size_t size_map;
 	off_t addr_align_st, addr_align_ed, start;
 	int result;
 	off_t i, j;
 
-	if (argc < 3) {
+	//get arguments
+	o.fname = "/dev/mem";
+	while ((opt = getopt(argc, argv, "k:h")) != -1) {
+		switch (opt) {
+		case 'k':
+			o.fname = optarg;
+			break;
+		case 'h':
+			usage(argc, argv);
+			return 0;
+		}
+	}
+	ind = optind;
+
+	if (argc - ind < 2) {
 		usage(argc, argv);
 		result = -EINVAL;
 		goto err_out1;
 	}
-
-	//get arguments
-	o.fname = "/dev/mem";
-	ind = 1;
 
 	//remain
 	cmd = argv[ind];
