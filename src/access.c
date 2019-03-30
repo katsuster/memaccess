@@ -214,7 +214,7 @@ int main(int argc, char *argv[])
 		result = -EINVAL;
 		goto err_out2;
 	}
-	if (size % o.size_unit != 0) {
+	if (size % o.size_unit != 0 || size == 0) {
 		fprintf(stderr, "size %d is not multiples of %d.\n",
 			(int)size, (int)o.size_unit);
 		result = -EINVAL;
