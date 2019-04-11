@@ -1,8 +1,10 @@
 #define _FILE_OFFSET_BITS 64
 
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
@@ -89,7 +91,7 @@ int mm_unmap(struct mm_mapping *m)
 void *mm_phys_to_virt(const struct mm_mapping *m, uint64_t paddr)
 {
 	if (paddr < m->offset || (m->offset + m->size) < paddr) {
-		fprintf(stderr, "p2v: 0x%08lx is out of bounds, return 0.\n",
+		fprintf(stderr, "p2v: 0x%08"PRIx64" is out of bounds.\n",
 			paddr);
 		return 0;
 	}
@@ -102,7 +104,7 @@ uint64_t mm_readq(const struct mm_mapping *m, uint64_t paddr)
 	volatile uint64_t *ptr;
 
 	if (paddr < m->offset || (m->offset + m->size) < paddr) {
-		fprintf(stderr, "rq: 0x%08lx is out of bounds, return 0.\n",
+		fprintf(stderr, "rq: 0x%08"PRIx64" is out of bounds.\n",
 			paddr);
 		return 0;
 	}
@@ -117,7 +119,7 @@ uint32_t mm_readl(const struct mm_mapping *m, uint64_t paddr)
 	volatile uint32_t *ptr;
 
 	if (paddr < m->offset || (m->offset + m->size) < paddr) {
-		fprintf(stderr, "rl: 0x%08lx is out of bounds, return 0.\n",
+		fprintf(stderr, "rl: 0x%08"PRIx64" is out of bounds.\n",
 			paddr);
 		return 0;
 	}
@@ -132,7 +134,7 @@ uint16_t mm_readw(const struct mm_mapping *m, uint64_t paddr)
 	volatile uint16_t *ptr;
 
 	if (paddr < m->offset || (m->offset + m->size) < paddr) {
-		fprintf(stderr, "rw: 0x%08lx is out of bounds, return 0.\n",
+		fprintf(stderr, "rw: 0x%08"PRIx64" is out of bounds.\n",
 			paddr);
 		return 0;
 	}
@@ -147,7 +149,7 @@ uint8_t mm_readb(const struct mm_mapping *m, uint64_t paddr)
 	volatile uint8_t *ptr;
 
 	if (paddr < m->offset || (m->offset + m->size) < paddr) {
-		fprintf(stderr, "rb: 0x%08lx is out of bounds, return 0.\n",
+		fprintf(stderr, "rb: 0x%08"PRIx64" is out of bounds.\n",
 			paddr);
 		return 0;
 	}
@@ -162,7 +164,7 @@ void mm_writeq(const struct mm_mapping *m, uint64_t val, uint64_t paddr)
 	volatile uint64_t *ptr;
 
 	if (paddr < m->offset || (m->offset + m->size) < paddr) {
-		fprintf(stderr, "wq: 0x%08lx is out of bounds, ignored.\n",
+		fprintf(stderr, "wq: 0x%08"PRIx64" is out of bounds.\n",
 			paddr);
 		return;
 	}
@@ -177,7 +179,7 @@ void mm_writel(const struct mm_mapping *m, uint32_t val, uint64_t paddr)
 	volatile uint32_t *ptr;
 
 	if (paddr < m->offset || (m->offset + m->size) < paddr) {
-		fprintf(stderr, "wl: 0x%08lx is out of bounds, ignored.\n",
+		fprintf(stderr, "wl: 0x%08"PRIx64" is out of bounds.\n",
 			paddr);
 		return;
 	}
@@ -192,7 +194,7 @@ void mm_writew(const struct mm_mapping *m, uint16_t val, uint64_t paddr)
 	volatile uint16_t *ptr;
 
 	if (paddr < m->offset || (m->offset + m->size) < paddr) {
-		fprintf(stderr, "ww: 0x%08lx is out of bounds, ignored.\n",
+		fprintf(stderr, "ww: 0x%08"PRIx64" is out of bounds.\n",
 			paddr);
 		return;
 	}
@@ -207,7 +209,7 @@ void mm_writeb(const struct mm_mapping *m, uint8_t val, uint64_t paddr)
 	volatile uint8_t *ptr;
 
 	if (paddr < m->offset || (m->offset + m->size) < paddr) {
-		fprintf(stderr, "wb: 0x%08lx is out of bounds, ignored.\n",
+		fprintf(stderr, "wb: 0x%08"PRIx64" is out of bounds.\n",
 			paddr);
 		return;
 	}
