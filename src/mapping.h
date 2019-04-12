@@ -15,6 +15,7 @@ struct mm_mapping {
 int mm_map(struct mm_mapping *mr, const char *fname, size_t size, off_t offset);
 int mm_unmap(struct mm_mapping *mr);
 
+int mm_is_valid(const struct mm_mapping *m, uint64_t paddr);
 void *mm_phys_to_virt(const struct mm_mapping *m, uint64_t paddr);
 
 uint64_t mm_readq(const struct mm_mapping *m, uint64_t paddr);
