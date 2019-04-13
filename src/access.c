@@ -152,7 +152,7 @@ int main(int argc, char *argv[])
 		goto err_out1;
 	}
 
-	addr = strtoll(argv[ind + 1], &endchar, 16);
+	addr = strtoull(argv[ind + 1], &endchar, 16);
 	if (*endchar != '\0') {
 		fprintf(stderr, "invalid address '%s'.\n", argv[ind + 1]);
 		result = -EINVAL;
