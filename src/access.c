@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
 	char *endchar;
 	off_t addr;
 	size_t size;
-	uint32_t *list_val;
+	uint64_t *list_val;
 	int cnt_list;
 
 	struct mm_mapping m;
@@ -190,7 +190,7 @@ int main(int argc, char *argv[])
 		(int)o.size_unit, list_start, cnt_list);
 
 	//alloc value_list
-	list_val = calloc(cnt_list, sizeof(uint32_t));
+	list_val = calloc(cnt_list, sizeof(uint64_t));
 	if (list_val == NULL) {
 		perror("calloc(list)");
 		result = -EINVAL;
@@ -201,11 +201,11 @@ int main(int argc, char *argv[])
 	}
 
 	//print 'value_list' arguments
-	//printf("list:%d\n  ", cnt_list);
-	//for (i = 0; i < cnt_list; i++) {
-	//	printf("%08x ", list_val[i]);
-	//}
-	//printf("\n");
+	DPRINTF("list:%d\n  ", cnt_list);
+	for (i = 0; i < cnt_list; i++) {
+		DPRINTF("%08"PRIx64" ", list_val[i]);
+	}
+	DPRINTF("\n");
 
 	//check arguments
 	if (addr % o.size_unit != 0) {
