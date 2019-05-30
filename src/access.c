@@ -36,6 +36,8 @@ struct app_option {
 	int cnt_list;
 };
 
+typedef int (*rw_func)(struct app_option *o, const struct mm_mapping *m);
+
 __attribute__ ((format (printf, 1, 2)))
 int dbg_printf(const char *format, ...)
 {
@@ -50,6 +52,106 @@ int dbg_printf(const char *format, ...)
 	va_end(ap);
 
 	return res;
+}
+
+int rw_none(struct app_option *o, const struct mm_mapping *m)
+{
+	return 0;
+}
+
+int ma_rd_head(struct app_option *o, const struct mm_mapping *m)
+{
+	off_t i = o->addr & ~0xfULL;
+
+	printf("%08llx  ", (unsigned long long)i);
+	while (i < o->addr) {
+		switch (o->size_unit) {
+		case 8:
+			printf("---------------- ");
+			break;
+		case 4:
+			printf("-------- ");
+			break;
+		case 2:
+			printf("---- ");
+			break;
+		case 1:
+			printf("-- ");
+			break;
+		default:
+			return -EINVAL;
+		}
+
+		i += o->size_unit;
+
+		if ((unsigned)i % 16 == 8) {
+			printf(" ");
+		}
+	}
+
+	return 0;
+}
+
+int ma_rd_body(struct app_option *o, const struct mm_mapping *m)
+{
+	off_t i;
+
+	for (i = o->addr; i < o->addr + o->size; ) {
+		switch (o->size_unit) {
+		case 8:
+			printf("%016"PRIx64" ", mm_readq(m, i));
+			break;
+		case 4:
+			printf("%08"PRIx32" ", mm_readl(m, i));
+			break;
+		case 2:
+			printf("%04x ", mm_readw(m, i));
+			break;
+		case 1:
+			printf("%02x ", mm_readb(m, i));
+			break;
+		default:
+			return -EINVAL;
+		}
+
+		i += o->size_unit;
+
+		if ((unsigned)i % 16 == 0) {
+			printf("\n%08llx  ", (unsigned long long)i);
+		}
+		if ((unsigned)i % 16 == 8) {
+			printf(" ");
+		}
+	}
+	printf("\n");
+
+	return 0;
+}
+
+int ma_wr_body(struct app_option *o, const struct mm_mapping *m)
+{
+	off_t i, j = 0;
+
+	for (i = o->addr; i < o->addr + o->size; i += o->size_unit, j++) {
+		switch (o->size_unit) {
+		case 8:
+			mm_writeq(m, o->list_val[j % o->cnt_list], i);
+			break;
+		case 4:
+			mm_writel(m, o->list_val[j % o->cnt_list], i);
+			break;
+		case 2:
+			mm_writew(m, o->list_val[j % o->cnt_list], i);
+			break;
+		case 1:
+			mm_writeb(m, o->list_val[j % o->cnt_list], i);
+			break;
+		default:
+			return -EINVAL;
+		}
+	}
+
+	return 0;
 }
 
 void usage(int argc, char *argv[])
@@ -90,9 +192,11 @@ int main(int argc, char *argv[])
 	struct mm_mapping m;
 	int opt, list_start;
 	size_t size_map;
-	off_t addr_align_st, addr_align_ed, start;
+	off_t addr_align_st, addr_align_ed;
 	int result;
-	off_t i, j;
+	off_t i;
+	rw_func rd_head = ma_rd_head, rd_body = ma_rd_body;
+	rw_func wr_head = rw_none, wr_body = ma_wr_body;
 
 	//get arguments
 	o.fname = "/dev/mem";
@@ -245,90 +349,22 @@ int main(int argc, char *argv[])
 	DPRINTF("addr:0x%08llx, addr+size:0x%08llx\n",
 		(unsigned long long)o.addr,
 		(unsigned long long)o.addr + o.size);
-	start = o.addr & ~0xfULL;
 	if (o.is_read) {
-		i = start;
+		result  = rd_head(&o, &m);
+		if (result)
+			goto err_out3;
 
-		printf("%08llx  ", (unsigned long long)i);
-		while (i < o.addr) {
-			switch (o.size_unit) {
-			case 8:
-				printf("---------------- ");
-				break;
-			case 4:
-				printf("-------- ");
-				break;
-			case 2:
-				printf("---- ");
-				break;
-			case 1:
-				printf("-- ");
-				break;
-			default:
-				result = -EINVAL;
-				goto err_out3;
-			}
-
-			i += o.size_unit;
-
-			if ((unsigned)i % 16 == 8) {
-				printf(" ");
-			}
-		}
-		while (i < o.addr + o.size) {
-			switch (o.size_unit) {
-			case 8:
-				printf("%016"PRIx64" ", mm_readq(&m, i));
-				break;
-			case 4:
-				printf("%08"PRIx32" ", mm_readl(&m, i));
-				break;
-			case 2:
-				printf("%04x ", mm_readw(&m, i));
-				break;
-			case 1:
-				printf("%02x ", mm_readb(&m, i));
-				break;
-			default:
-				result = -EINVAL;
-				goto err_out3;
-			}
-
-			i += o.size_unit;
-
-			if ((unsigned)i % 16 == 0) {
-				printf("\n%08llx  ", (unsigned long long)i);
-			}
-			if ((unsigned)i % 16 == 8) {
-				printf(" ");
-			}
-		}
-		printf("\n");
+		result = rd_body(&o, &m);
+		if (result)
+			goto err_out3;
 	} else {
-		j = 0;
-		for (i = o.addr; i < o.addr + o.size; i += o.size_unit, j++) {
-			switch (o.size_unit) {
-			case 8:
-				mm_writeq(&m,
-					o.list_val[j % o.cnt_list], i);
-				break;
-			case 4:
-				mm_writel(&m,
-					o.list_val[j % o.cnt_list], i);
-				break;
-			case 2:
-				mm_writew(&m,
-					o.list_val[j % o.cnt_list], i);
-				break;
-			case 1:
-				mm_writeb(&m,
-					o.list_val[j % o.cnt_list], i);
-				break;
-			default:
-				result = -EINVAL;
-				goto err_out3;
-			}
-		}
+		result  = wr_head(&o, &m);
+		if (result)
+			goto err_out3;
+
+		result = wr_body(&o, &m);
+		if (result)
+			goto err_out3;
 	}
 
 	mm_unmap(&m);
