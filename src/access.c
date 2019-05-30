@@ -30,6 +30,10 @@ struct app_option {
 	const char *fname;
 	int is_read;
 	size_t size_unit;
+	off_t addr;
+	size_t size;
+	uint64_t *list_val;
+	int cnt_list;
 };
 
 __attribute__ ((format (printf, 1, 2)))
@@ -82,10 +86,6 @@ int main(int argc, char *argv[])
 	int ind;
 	const char *cmd;
 	char *endchar;
-	off_t addr;
-	size_t size;
-	uint64_t *list_val;
-	int cnt_list;
 
 	struct mm_mapping m;
 	int opt, list_start;
@@ -152,7 +152,7 @@ int main(int argc, char *argv[])
 		goto err_out1;
 	}
 
-	addr = strtoull(argv[ind + 1], &endchar, 16);
+	o.addr = strtoull(argv[ind + 1], &endchar, 16);
 	if (*endchar != '\0') {
 		fprintf(stderr, "invalid address '%s'.\n", argv[ind + 1]);
 		result = -EINVAL;
@@ -161,13 +161,13 @@ int main(int argc, char *argv[])
 
 	if (o.is_read) {
 		if (argc - ind < 3) {
-			size = DEFAULT_DUMP_SIZE;
+			o.size = DEFAULT_DUMP_SIZE;
 		} else {
-			size = strtol(argv[ind + 2], NULL, 0);
+			o.size = strtol(argv[ind + 2], NULL, 0);
 		}
 
 		list_start = 0;
-		cnt_list = 0;
+		o.cnt_list = 0;
 	} else {
 		if (argc - ind < 3) {
 			usage(argc, argv);
@@ -175,58 +175,58 @@ int main(int argc, char *argv[])
 			goto err_out1;
 		}
 		if (argc - ind < 4) {
-			size = o.size_unit;
+			o.size = o.size_unit;
 			list_start = ind + 2;
 		} else {
-			size = strtol(argv[ind + 2], NULL, 0);
+			o.size = strtol(argv[ind + 2], NULL, 0);
 			list_start = ind + 3;
 		}
 
-		cnt_list = argc - list_start;
+		o.cnt_list = argc - list_start;
 	}
 	DPRINTF("cmd:%s, addr:0x%08llx, size:%d, "
 		"size_unit:%d list_start:%d, cnt:%d\n",
-		cmd, (unsigned long long)addr, (int)size,
-		(int)o.size_unit, list_start, cnt_list);
+		cmd, (unsigned long long)o.addr, (int)o.size,
+		(int)o.size_unit, list_start, o.cnt_list);
 
 	//alloc value_list
-	list_val = calloc(cnt_list, sizeof(uint64_t));
-	if (list_val == NULL) {
+	o.list_val = calloc(o.cnt_list, sizeof(uint64_t));
+	if (o.list_val == NULL) {
 		perror("calloc(list)");
 		result = -EINVAL;
 		goto err_out1;
 	}
-	for (i = 0; i < cnt_list; i++) {
-		list_val[i] = strtoll(argv[list_start + i], NULL, 0);
+	for (i = 0; i < o.cnt_list; i++) {
+		o.list_val[i] = strtoll(argv[list_start + i], NULL, 0);
 	}
 
 	//print 'value_list' arguments
-	DPRINTF("list:%d\n  ", cnt_list);
-	for (i = 0; i < cnt_list; i++) {
-		DPRINTF("%08"PRIx64" ", list_val[i]);
+	DPRINTF("list:%d\n  ", o.cnt_list);
+	for (i = 0; i < o.cnt_list; i++) {
+		DPRINTF("%08"PRIx64" ", o.list_val[i]);
 	}
 	DPRINTF("\n");
 
 	//check arguments
-	if (addr % o.size_unit != 0) {
+	if (o.addr % o.size_unit != 0) {
 		fprintf(stderr, "address 0x%08llx is not aligned of %d.\n",
-			(unsigned long long)addr, (int)o.size_unit);
+			(unsigned long long)o.addr, (int)o.size_unit);
 		result = -EINVAL;
 		goto err_out2;
 	}
-	if (size % o.size_unit != 0 || size == 0) {
+	if (o.size % o.size_unit != 0 || o.size == 0) {
 		fprintf(stderr, "size %d is not multiples of %d.\n",
-			(int)size, (int)o.size_unit);
+			(int)o.size, (int)o.size_unit);
 		result = -EINVAL;
 		goto err_out2;
 	}
 
 	//mmap device
-	addr_align_st = addr & PAGE_MASK;
-	if (((addr + size) & ~PAGE_MASK) == 0)
-		addr_align_ed = (addr + size) & PAGE_MASK;
+	addr_align_st = o.addr & PAGE_MASK;
+	if (((o.addr + o.size) & ~PAGE_MASK) == 0)
+		addr_align_ed = (o.addr + o.size) & PAGE_MASK;
 	else
-		addr_align_ed = (addr + size + PAGE_SIZE) & PAGE_MASK;
+		addr_align_ed = (o.addr + o.size + PAGE_SIZE) & PAGE_MASK;
 	size_map = addr_align_ed - addr_align_st;
 	if (sizeof(size_map) == 4 && addr_align_st > 0xf0000000) {
 		size_map = 0 - addr_align_st - 4;
@@ -243,14 +243,14 @@ int main(int argc, char *argv[])
 	}
 
 	DPRINTF("addr:0x%08llx, addr+size:0x%08llx\n",
-		(unsigned long long)addr,
-		(unsigned long long)addr + size);
-	start = addr & ~0xfULL;
+		(unsigned long long)o.addr,
+		(unsigned long long)o.addr + o.size);
+	start = o.addr & ~0xfULL;
 	if (o.is_read) {
 		i = start;
 
 		printf("%08llx  ", (unsigned long long)i);
-		while (i < addr) {
+		while (i < o.addr) {
 			switch (o.size_unit) {
 			case 8:
 				printf("---------------- ");
@@ -275,7 +275,7 @@ int main(int argc, char *argv[])
 				printf(" ");
 			}
 		}
-		while (i < addr + size) {
+		while (i < o.addr + o.size) {
 			switch (o.size_unit) {
 			case 8:
 				printf("%016"PRIx64" ", mm_readq(&m, i));
@@ -306,23 +306,23 @@ int main(int argc, char *argv[])
 		printf("\n");
 	} else {
 		j = 0;
-		for (i = addr; i < addr + size; i += o.size_unit, j++) {
+		for (i = o.addr; i < o.addr + o.size; i += o.size_unit, j++) {
 			switch (o.size_unit) {
 			case 8:
 				mm_writeq(&m,
-					list_val[j % cnt_list], i);
+					o.list_val[j % o.cnt_list], i);
 				break;
 			case 4:
 				mm_writel(&m,
-					list_val[j % cnt_list], i);
+					o.list_val[j % o.cnt_list], i);
 				break;
 			case 2:
 				mm_writew(&m,
-					list_val[j % cnt_list], i);
+					o.list_val[j % o.cnt_list], i);
 				break;
 			case 1:
 				mm_writeb(&m,
-					list_val[j % cnt_list], i);
+					o.list_val[j % o.cnt_list], i);
 				break;
 			default:
 				result = -EINVAL;
@@ -333,9 +333,9 @@ int main(int argc, char *argv[])
 
 	mm_unmap(&m);
 
-	free(list_val);
-	list_val = NULL;
-	cnt_list = 0;
+	free(o.list_val);
+	o.list_val = NULL;
+	o.cnt_list = 0;
 
 	return 0;
 
@@ -343,9 +343,9 @@ err_out3:
 	mm_unmap(&m);
 
 err_out2:
-	free(list_val);
-	list_val = NULL;
-	cnt_list = 0;
+	free(o.list_val);
+	o.list_val = NULL;
+	o.cnt_list = 0;
 
 err_out1:
 	return result;
