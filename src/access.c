@@ -154,6 +154,105 @@ int ma_wr_body(struct app_option *o, const struct mm_mapping *m)
 	return 0;
 }
 
+int dump_rd_body(struct app_option *o, const struct mm_mapping *m)
+{
+	uint64_t v64;
+	uint32_t v32;
+	uint16_t v16;
+	uint8_t v8;
+	void *vp;
+	ssize_t nwr;
+	off_t i;
+
+	for (i = o->addr; i < o->addr + o->size; i += o->size_unit) {
+		switch (o->size_unit) {
+		case 8:
+			v64 = mm_readq(m, i);
+			vp = &v64;
+			break;
+		case 4:
+			v32 = mm_readl(m, i);
+			vp = &v32;
+			break;
+		case 2:
+			v16 = mm_readw(m, i);
+			vp = &v16;
+			break;
+		case 1:
+			v8 = mm_readb(m, i);
+			vp = &v8;
+			break;
+		default:
+			return -EINVAL;
+		}
+
+		nwr = fwrite(vp, o->size_unit, 1, stdout);
+		if (nwr != 1) {
+			fprintf(stderr, "cannot output data at 0x%08llx\n",
+				(unsigned long long)i);
+			return -EIO;
+		}
+	}
+
+	return 0;
+}
+
+int dump_wr_body(struct app_option *o, const struct mm_mapping *m)
+{
+	uint64_t v64;
+	uint32_t v32;
+	uint16_t v16;
+	uint8_t v8;
+	void *vp;
+	ssize_t nrd;
+	off_t i;
+
+	for (i = o->addr; i < o->addr + o->size; i += o->size_unit) {
+		switch (o->size_unit) {
+		case 8:
+			vp = &v64;
+			break;
+		case 4:
+			vp = &v32;
+			break;
+		case 2:
+			vp = &v16;
+			break;
+		case 1:
+			vp = &v8;
+			break;
+		default:
+			return -EINVAL;
+		}
+
+		nrd = fread(vp, o->size_unit, 1, stdout);
+		if (nrd != 1) {
+			fprintf(stderr, "cannot input data at 0x%08llx\n",
+				(unsigned long long)i);
+			return -EIO;
+		}
+
+		switch (o->size_unit) {
+		case 8:
+			mm_writeq(m, v64, i);
+			break;
+		case 4:
+			mm_writel(m, v32, i);
+			break;
+		case 2:
+			mm_writew(m, v16, i);
+			break;
+		case 1:
+			mm_writeb(m, v8, i);
+			break;
+		default:
+			return -EINVAL;
+		}
+	}
+
+	return 0;
+}
+
 void usage(int argc, char *argv[])
 {
 	printf("usage: \n"
@@ -162,6 +261,7 @@ void usage(int argc, char *argv[])
 		"  %s [options] edit_command address size value_list\n"
 		"  options\n"
 		"    -k    use filename instead of /dev/mem\n"
+		"    -s    read/write raw data from stdin/stdout\n"
 		"    -d    show debug message\n"
 		"    -h    show this help\n"
 		"\n"
@@ -200,10 +300,16 @@ int main(int argc, char *argv[])
 
 	//get arguments
 	o.fname = "/dev/mem";
-	while ((opt = getopt(argc, argv, "k:dh")) != -1) {
+	while ((opt = getopt(argc, argv, "k:sdh")) != -1) {
 		switch (opt) {
 		case 'k':
 			o.fname = optarg;
+			break;
+		case 's':
+			rd_head = rw_none;
+			rd_body = dump_rd_body;
+			wr_head = rw_none;
+			wr_body = dump_wr_body;
 			break;
 		case 'd':
 			g_debug = 1;
