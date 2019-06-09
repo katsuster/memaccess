@@ -37,7 +37,7 @@ $ ma dd 0x100
 Write value 0x2000 to address 0x110.
 
 ~~~
-$ ./src/ma -k aaa ed 0x110 0x2000
+$ ./src/ma ed 0x110 0x2000
 ~~~
 
 Dump again memory area from address 0x100. Data located 0x110 is changed.
