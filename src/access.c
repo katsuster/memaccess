@@ -226,7 +226,7 @@ int dump_wr_body(struct app_option *o, const struct mm_mapping *m)
 			return -EINVAL;
 		}
 
-		nrd = fread(vp, o->size_unit, 1, stdout);
+		nrd = fread(vp, o->size_unit, 1, stdin);
 		if (nrd != 1) {
 			fprintf(stderr, "cannot input data at 0x%08llx\n",
 				(unsigned long long)i);
