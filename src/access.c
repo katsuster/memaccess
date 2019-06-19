@@ -28,6 +28,7 @@ int g_debug = 0;
 
 struct app_option {
 	const char *fname;
+	int is_stdio;
 	int is_read;
 	size_t size_unit;
 	off_t addr;
@@ -300,12 +301,14 @@ int main(int argc, char *argv[])
 
 	//get arguments
 	o.fname = "/dev/mem";
+	o.is_stdio = 0;
 	while ((opt = getopt(argc, argv, "k:sdh")) != -1) {
 		switch (opt) {
 		case 'k':
 			o.fname = optarg;
 			break;
 		case 's':
+			o.is_stdio = 1;
 			rd_head = rw_none;
 			rd_body = dump_rd_body;
 			wr_head = rw_none;
@@ -384,7 +387,7 @@ int main(int argc, char *argv[])
 			result = -EINVAL;
 			goto err_out1;
 		}
-		if (argc - ind < 4) {
+		if (!o.is_stdio && argc - ind < 4) {
 			o.size = o.size_unit;
 			list_start = ind + 2;
 		} else {
