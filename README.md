@@ -1,5 +1,5 @@
 ## memaccess
-'memaccess' (command name 'ma') reads and writes value(s) to specified address.
+'memaccess' (command name 'ma') can read and write value(s) from/to specified address.
 
 ### Use Case
 
@@ -37,7 +37,7 @@ $ ma dd 0x100
 Write value 0x2000 to address 0x110.
 
 ~~~
-$ ./src/ma ed 0x110 0x2000
+$ ma ed 0x110 0x2000
 ~~~
 
 Dump again memory area from address 0x100. Data located 0x110 is changed.
