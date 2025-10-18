@@ -410,7 +410,7 @@ int main(int argc, char *argv[])
 		goto err_out1;
 	}
 	for (i = 0; i < o.cnt_list; i++) {
-		o.list_val[i] = strtoll(argv[list_start + i], NULL, 0);
+		o.list_val[i] = strtoull(argv[list_start + i], NULL, 0);
 	}
 
 	//print 'value_list' arguments
